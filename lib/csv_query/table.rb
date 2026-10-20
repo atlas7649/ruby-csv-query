@@ -1,0 +1,75 @@
+module CsvQuery
+  class ParseError < StandardError; end
+
+  class Table
+    attr_reader :headers, :rows
+
+    def initialize(headers, rows)
+      @headers = (headers || []).map(&:to_s)
+      @rows = (rows || []).map { |r| normalize_row(r) }
+    end
+
+    def self.from_csv(text)
+      parsed = CSV.parse(text.to_s, headers: true, skip_blanks: true)
+      headers = parsed.headers
+      headers = [] if headers.nil?
+      rows = parsed.map { |r| headers.each_with_object({}) { |h, o| o[h.to_s] = r[h] } }
+      new(headers, rows)
+    rescue CSV::MalformedCSVError => e
+      raise ParseError, e.message
+    end
+
+    def self.from_file(path)
+      text = path == "-" ? $stdin.read : File.read(path)
+      from_csv(text)
+    end
+
+    def select(columns)
+      cols = columns.map(&:to_s)
+      unknown = cols - @headers
+      raise ArgumentError, "unknown column(s): #{unknown.join(', ')}" unless unknown.empty?
+      Table.new(cols, @rows.map { |r| cols.each_with_object({}) { |c, o| o[c] = r[c] } })
+    end
+
+    def where(expr)
+      pred = Condition.parse(expr, @headers)
+      Table.new(@headers, @rows.select { |r| pred.call(r) })
+    end
+
+    def sort_by(column, direction = :asc)
+      col = column.to_s
+      raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
+      sorted = @rows.sort_by { |r| sort_key(r[col]) }
+      sorted = sorted.reverse if direction.to_sym == :desc
+      Table.new(@headers, sorted)
+    end
+
+    def distinct
+      Table.new(@headers, @rows.uniq)
+    end
+
+    def limit(n)
+      Table.new(@headers, @rows.first(n.to_i))
+    end
+
+    private
+
+    def normalize_row(r)
+      if r.is_a?(Hash)
+        r.each_with_object({}) { |(k, v), o| o[k.to_s] = v }
+      else
+        @headers.each_with_index.each_with_object({}) { |(h, i), o| o[h.to_s] = r[i] }
+      end
+    end
+
+    def sort_key(v)
+      if v.nil? || v.to_s.strip.empty?
+        [0, ""]
+      elsif Condition.numeric?(v)
+        [1, Float(v)]
+      else
+        [2, v.to_s.downcase]
+      end
+    end
+  end
+end

@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+require_relative "../lib/csv_query"
+CsvQuery::CLI.run(ARGV)
