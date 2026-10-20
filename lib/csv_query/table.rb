@@ -22,6 +22,7 @@ module CsvQuery
 
     def self.from_file(path)
       text = path == "-" ? $stdin.read : File.read(path)
+      text = text.encode("UTF-8", invalid: :replace, undef: :replace) rescue text
       from_csv(text)
     end
 
@@ -40,8 +41,12 @@ module CsvQuery
     def sort_by(column, direction = :asc)
       col = column.to_s
       raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
-      sorted = @rows.sort_by { |r| sort_key(r[col]) }
-      sorted = sorted.reverse if direction.to_sym == :desc
+      desc = direction.to_sym == :desc
+      sorted = @rows.each_with_index.sort do |(ra, ia), (rb, ib)|
+        cmp = sort_key(ra[col]) <=> sort_key(rb[col])
+        cmp = -cmp if desc && !cmp.zero?
+        cmp.zero? ? ia <=> ib : cmp
+      end.map(&:first)
       Table.new(@headers, sorted)
     end
 
@@ -50,7 +55,9 @@ module CsvQuery
     end
 
     def limit(n)
-      Table.new(@headers, @rows.first(n.to_i))
+      count = n.to_i
+      count = 0 if count < 0
+      Table.new(@headers, @rows.first(count))
     end
 
     def count

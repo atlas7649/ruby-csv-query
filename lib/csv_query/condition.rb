@@ -67,15 +67,14 @@ module CsvQuery
 
     def self.numeric?(v)
       return false if v.nil?
-      Float(v)
-      true
+      Float(v).finite?
     rescue ArgumentError, TypeError
       false
     end
 
     def self.regex_match?(actual, expected)
       actual.to_s.match?(Regexp.new(expected.to_s))
-    rescue RegexpError
+    rescue RegexpError, ArgumentError, Encoding::CompatibilityError
       false
     end
 

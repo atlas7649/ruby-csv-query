@@ -39,6 +39,14 @@ class TestTable < Minitest::Test
     assert_equal "30", t.rows[0]["age"]
   end
 
+  def test_sort_stable_preserves_original_order_for_ties
+    t = CsvQuery::Table.from_csv("name,age\nAlice,30\nBob,30\nCharlie,25\n")
+    asc = t.sort_by("age")
+    assert_equal %w[Charlie Alice Bob], asc.rows.map { |r| r["name"] }
+    desc = t.sort_by("age", :desc)
+    assert_equal %w[Alice Bob Charlie], desc.rows.map { |r| r["name"] }
+  end
+
   def test_distinct
     t = CsvQuery::Table.from_csv(CSV_TEXT).distinct
     assert_equal 3, t.rows.size
@@ -49,6 +57,11 @@ class TestTable < Minitest::Test
   def test_limit
     t = CsvQuery::Table.from_csv(CSV_TEXT).limit(2)
     assert_equal 2, t.rows.size
+  end
+
+  def test_limit_negative_returns_empty
+    t = CsvQuery::Table.from_csv(CSV_TEXT).limit(-1)
+    assert_equal 0, t.rows.size
   end
 
   def test_from_empty
