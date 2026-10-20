@@ -46,7 +46,7 @@ module CsvQuery
         table = table.sort_by(col, dir == "desc" ? :desc : :asc)
       end
       table = table.distinct if options[:distinct]
-      table = table.limit(options[:limit]) if options[:limit]
+      table = table.limit(options[:limit]) unless options[:limit].nil?
 
       if options[:count]
         puts table.rows.size
