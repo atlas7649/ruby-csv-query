@@ -16,7 +16,7 @@ module CsvQuery
       headers = [] if headers.nil?
       rows = parsed.respond_to?(:map) ? parsed.map { |r| headers.each_with_object({}) { |h, o| o[h.to_s] = r[h] } } : []
       new(headers, rows)
-    rescue CSV::MalformedCSVError, ArgumentError => e
+    rescue CSV::MalformedCSVError, ArgumentError, EncodingError => e
       raise ParseError, e.message
     end
 
@@ -43,7 +43,7 @@ module CsvQuery
       raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
       desc = direction.to_sym == :desc
       sorted = @rows.each_with_index.sort do |(ra, ia), (rb, ib)|
-        cmp = sort_key(ra[col]) <=> sort_key(rb[col])
+        cmp = (sort_key(ra[col]) <=> sort_key(rb[col])) || 0
         cmp = -cmp if desc && !cmp.zero?
         cmp.zero? ? ia <=> ib : cmp
       end.map(&:first)
@@ -78,7 +78,11 @@ module CsvQuery
       if v.nil? || v.to_s.strip.empty?
         [0, ""]
       elsif Condition.numeric?(v)
-        [1, Float(v)]
+        if v.to_s.strip.match?(/\A[+-]?\d+\z/)
+          [1, Integer(v.to_s.strip)]
+        else
+          [1, Float(v)]
+        end
       else
         [2, v.to_s.downcase]
       end

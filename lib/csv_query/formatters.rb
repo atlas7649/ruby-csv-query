@@ -9,6 +9,7 @@ module CsvQuery
     end
 
     def self.csv(table)
+      return "" if table.headers.empty?
       CSV.generate do |csv|
         csv << table.headers
         table.rows.each { |r| csv << table.headers.map { |h| r[h] } }

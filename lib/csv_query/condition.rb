@@ -9,6 +9,21 @@ module CsvQuery
       # tie-breaker so equal-length operators are always tried consistently.
       ordered_ops = OPS.each_with_index.sort_by { |op, i| [-op.length, i] }.map(&:first)
 
+      # Prefer columns that are actually present. This prevents a value that
+      # contains operator characters from being mistaken for part of the column.
+      headers.sort_by { |h| -h.length }.each do |col|
+        next if col.empty?
+        [col, "\"#{col}\"", "'#{col}'"].each do |needle|
+          ordered_ops.each do |op|
+            re = /\A\s*#{Regexp.escape(needle)}\s*#{Regexp.escape(op)}\s*(.+?)\s*\z/im
+            m = expr.match(re)
+            next unless m
+            val = unquote(m[1].strip)
+            return ->(row) { compare(row[col], op.downcase, val) }
+          end
+        end
+      end
+
       unknown_column = nil
       ordered_ops.each do |op|
         re = /\A\s*(.+?)\s*#{Regexp.escape(op)}\s*(.+?)\s*\z/im
@@ -74,7 +89,7 @@ module CsvQuery
 
     def self.regex_match?(actual, expected)
       actual.to_s.match?(Regexp.new(expected.to_s))
-    rescue RegexpError, ArgumentError, Encoding::CompatibilityError
+    rescue RegexpError, ArgumentError, Encoding::CompatibilityError, EncodingError
       false
     end
 
