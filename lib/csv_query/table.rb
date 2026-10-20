@@ -10,12 +10,13 @@ module CsvQuery
     end
 
     def self.from_csv(text)
-      parsed = CSV.parse(text.to_s, headers: true, skip_blanks: true)
-      headers = parsed.headers
+      text = text.to_s.sub(/\A\uFEFF/, "")
+      parsed = CSV.parse(text, headers: true, skip_blanks: true)
+      headers = parsed.respond_to?(:headers) ? parsed.headers : nil
       headers = [] if headers.nil?
-      rows = parsed.map { |r| headers.each_with_object({}) { |h, o| o[h.to_s] = r[h] } }
+      rows = parsed.respond_to?(:map) ? parsed.map { |r| headers.each_with_object({}) { |h, o| o[h.to_s] = r[h] } } : []
       new(headers, rows)
-    rescue CSV::MalformedCSVError => e
+    rescue CSV::MalformedCSVError, ArgumentError => e
       raise ParseError, e.message
     end
 
@@ -50,6 +51,10 @@ module CsvQuery
 
     def limit(n)
       Table.new(@headers, @rows.first(n.to_i))
+    end
+
+    def count
+      @rows.size
     end
 
     private

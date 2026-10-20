@@ -4,22 +4,27 @@ module CsvQuery
 
     def self.parse(expr, headers)
       expr = expr.to_s.strip
-      match = nil
-      OPS.sort_by(&:length).reverse.each do |op|
+      headers = (headers || []).map(&:to_s)
+      # Try longest operators first. Keep the original OPS order as a stable
+      # tie-breaker so equal-length operators are always tried consistently.
+      ordered_ops = OPS.each_with_index.sort_by { |op, i| [-op.length, i] }.map(&:first)
+
+      unknown_column = nil
+      ordered_ops.each do |op|
         re = /\A\s*(.+?)\s*#{Regexp.escape(op)}\s*(.+?)\s*\z/im
         m = expr.match(re)
         next unless m
         col = unquote(m[1].strip)
         val = unquote(m[2].strip)
-        unless headers.map(&:to_s).include?(col)
-          raise ArgumentError, "unknown column: #{col}"
+        unless headers.include?(col)
+          unknown_column ||= col
+          next
         end
-        match = [col, op.downcase, val]
-        break
+        return ->(row) { compare(row[col.to_s], op.downcase, val) }
       end
-      raise ArgumentError, "invalid condition: #{expr}" unless match
-      col, op, val = match
-      ->(row) { compare(row[col.to_s], op, val) }
+
+      raise ArgumentError, "unknown column: #{unknown_column}" if unknown_column
+      raise ArgumentError, "invalid condition: #{expr}"
     end
 
     def self.compare(actual, op, expected)
@@ -30,7 +35,7 @@ module CsvQuery
       when "contains" then actual.to_s.downcase.include?(expected.to_s.downcase)
       when "starts_with" then actual.to_s.downcase.start_with?(expected.to_s.downcase)
       when "ends_with" then actual.to_s.downcase.end_with?(expected.to_s.downcase)
-      when "=~", "~" then actual.to_s.match?(Regexp.new(expected.to_s))
+      when "=~", "~" then regex_match?(actual, expected)
       else false
       end
     end
@@ -65,6 +70,12 @@ module CsvQuery
       Float(v)
       true
     rescue ArgumentError, TypeError
+      false
+    end
+
+    def self.regex_match?(actual, expected)
+      actual.to_s.match?(Regexp.new(expected.to_s))
+    rescue RegexpError
       false
     end
 
