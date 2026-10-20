@@ -14,15 +14,16 @@ module CsvQuery
       parsed = CSV.parse(text, headers: true, skip_blanks: true)
       headers = parsed.respond_to?(:headers) ? parsed.headers : nil
       headers = [] if headers.nil?
-      rows = parsed.respond_to?(:map) ? parsed.map { |r| headers.each_with_object({}) { |h, o| o[h.to_s] = r[h] } } : []
+      rows = parsed.respond_to?(:map) ? parsed.map { |r| headers.each_with_index.each_with_object({}) { |(h, i), o| o[h.to_s] = r[i] } } : []
       new(headers, rows)
     rescue CSV::MalformedCSVError, ArgumentError, EncodingError => e
       raise ParseError, e.message
     end
 
     def self.from_file(path)
-      text = path == "-" ? $stdin.read : File.read(path)
-      text = text.encode("UTF-8", invalid: :replace, undef: :replace) rescue text
+      text = path == "-" ? $stdin.binmode.read : File.binread(path)
+      text = text.to_s.dup.force_encoding("UTF-8")
+      text = text.encode("UTF-8", invalid: :replace, undef: :replace)
       from_csv(text)
     end
 

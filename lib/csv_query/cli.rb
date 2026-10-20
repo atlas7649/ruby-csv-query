@@ -51,7 +51,9 @@ module CsvQuery
       if options[:count]
         puts table.rows.size
       else
-        puts Formatters.format(table, options[:format])
+        output = Formatters.format(table, options[:format])
+        print output
+        puts unless output.end_with?("\n")
       end
     rescue => e
       warn "csvq: #{e.message}"
