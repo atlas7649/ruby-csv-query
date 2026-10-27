@@ -62,6 +62,13 @@ module CsvQuery
       Table.new(@headers, @rows.first(count))
     end
 
+    def offset(n)
+      return Table.new(@headers, @rows) if n.nil?
+      count = n.to_i
+      count = 0 if count < 0
+      Table.new(@headers, @rows.drop(count))
+    end
+
     def count
       @rows.size
     end

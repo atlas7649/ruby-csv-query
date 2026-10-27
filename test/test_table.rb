@@ -69,6 +69,22 @@ class TestTable < Minitest::Test
     assert_equal 0, t.rows.size
   end
 
+  def test_offset
+    t = CsvQuery::Table.from_csv(CSV_TEXT).offset(1)
+    assert_equal 2, t.rows.size
+    assert_equal "Bob", t.rows[0]["name"]
+  end
+
+  def test_offset_nil_returns_all_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT).offset(nil)
+    assert_equal 3, t.rows.size
+  end
+
+  def test_offset_negative_returns_all_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT).offset(-1)
+    assert_equal 3, t.rows.size
+  end
+
   def test_from_empty
     t = CsvQuery::Table.from_csv("")
     assert_equal [], t.headers

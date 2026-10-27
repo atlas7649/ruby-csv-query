@@ -5,7 +5,7 @@ module CsvQuery
     def self.run(argv)
       options = {
         format: "table", select: nil, where: [], sort: nil,
-        distinct: false, count: false, limit: nil
+        distinct: false, count: false, limit: nil, offset: nil
       }
       parser = OptionParser.new do |o|
         o.banner = "Usage: csvq [options] [FILE]"
@@ -18,11 +18,14 @@ module CsvQuery
         o.on("--sort COL", "Sort by column, append :desc") do |v|
           options[:sort] = v
         end
-        o.on("-d", "--distinct", "Drop duplicate rows") { options[:distinct] = true }
-        o.on("-c", "--count", "Print number of rows") { options[:count] = true }
+        o.on("-o", "--offset N", Integer, "Skip first N rows") do |v|
+          options[:offset] = v
+        end
         o.on("-n", "--limit N", Integer, "Limit output rows") do |v|
           options[:limit] = v
         end
+        o.on("-d", "--distinct", "Drop duplicate rows") { options[:distinct] = true }
+        o.on("-c", "--count", "Print number of rows") { options[:count] = true }
         o.on("-f", "--format FMT", "table|csv|json") do |v|
           options[:format] = v
         end
@@ -46,6 +49,7 @@ module CsvQuery
         table = table.sort_by(col, dir == "desc" ? :desc : :asc)
       end
       table = table.distinct if options[:distinct]
+      table = table.offset(options[:offset]) unless options[:offset].nil?
       table = table.limit(options[:limit]) unless options[:limit].nil?
 
       if options[:count]
