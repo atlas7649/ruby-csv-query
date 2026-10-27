@@ -73,6 +73,12 @@ module CsvQuery
       @rows.size
     end
 
+    def pluck(column)
+      col = column.to_s
+      raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
+      @rows.map { |r| r[col] }
+    end
+
     private
 
     def normalize_row(r)

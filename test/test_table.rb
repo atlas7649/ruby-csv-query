@@ -85,6 +85,18 @@ class TestTable < Minitest::Test
     assert_equal 3, t.rows.size
   end
 
+  def test_pluck
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Alice Bob Charlie], t.pluck("name")
+    assert_equal %w[30 25 30], t.pluck(:age)
+  end
+
+  def test_pluck_unknown_raises
+    assert_raises(ArgumentError) do
+      CsvQuery::Table.from_csv(CSV_TEXT).pluck("nope")
+    end
+  end
+
   def test_from_empty
     t = CsvQuery::Table.from_csv("")
     assert_equal [], t.headers
