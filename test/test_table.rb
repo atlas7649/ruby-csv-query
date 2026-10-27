@@ -59,6 +59,11 @@ class TestTable < Minitest::Test
     assert_equal 2, t.rows.size
   end
 
+  def test_limit_nil_returns_all_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT).limit(nil)
+    assert_equal 3, t.rows.size
+  end
+
   def test_limit_negative_returns_empty
     t = CsvQuery::Table.from_csv(CSV_TEXT).limit(-1)
     assert_equal 0, t.rows.size
