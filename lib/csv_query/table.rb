@@ -80,7 +80,11 @@ module CsvQuery
         [0, ""]
       elsif Condition.numeric?(v)
         if v.to_s.strip.match?(/\A[+-]?\d+\z/)
-          [1, Integer(v.to_s.strip)]
+          begin
+            [1, Integer(v.to_s.strip, 10)]
+          rescue ArgumentError, TypeError
+            [1, Float(v)]
+          end
         else
           [1, Float(v)]
         end
