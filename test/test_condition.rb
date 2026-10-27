@@ -8,6 +8,18 @@ class TestCondition < Minitest::Test
     refute pred.call("age" => "25")
   end
 
+  def test_equality_preserves_leading_zeroes
+    pred = CsvQuery::Condition.parse("age = 08", %w[age])
+    assert pred.call("age" => "8")
+    refute pred.call("age" => "9")
+  end
+
+  def test_equality_large_integer_precision
+    pred = CsvQuery::Condition.parse("id = 9007199254740993", %w[id])
+    assert pred.call("id" => "9007199254740993")
+    refute pred.call("id" => "9007199254740992")
+  end
+
   def test_inequality
     pred = CsvQuery::Condition.parse("name != Bob", %w[name])
     assert pred.call("name" => "Alice")

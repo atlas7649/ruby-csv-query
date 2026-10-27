@@ -57,20 +57,27 @@ module CsvQuery
 
     def self.eq?(a, b)
       if numeric?(a) && numeric?(b)
-        Float(a) == Float(b)
+        if integer_string?(a) && integer_string?(b)
+          Integer(a.to_s.strip, 10) == Integer(b.to_s.strip, 10)
+        else
+          Float(a) == Float(b)
+        end
       else
         a.to_s == b.to_s
       end
     end
 
     def self.numeric_compare(a, b, op)
-      an = numeric?(a) ? Float(a) : nil
-      bn = numeric?(b) ? Float(b) : nil
-      cmp = if an && bn
-              an <=> bn
-            else
-              a.to_s <=> b.to_s
-            end
+      if numeric?(a) && numeric?(b)
+        cmp = if integer_string?(a) && integer_string?(b)
+                Integer(a.to_s.strip, 10) <=> Integer(b.to_s.strip, 10)
+              else
+                Float(a) <=> Float(b)
+              end
+      else
+        cmp = (a.to_s <=> b.to_s) || 0
+      end
+      cmp = 0 if cmp.nil?
       case op
       when ">" then cmp > 0
       when "<" then cmp < 0
@@ -85,6 +92,10 @@ module CsvQuery
       Float(v).finite?
     rescue ArgumentError, TypeError
       false
+    end
+
+    def self.integer_string?(v)
+      !v.nil? && v.to_s.strip.match?(/\A[+-]?\d+\z/)
     end
 
     def self.regex_match?(actual, expected)
