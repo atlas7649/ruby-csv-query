@@ -69,6 +69,10 @@ module CsvQuery
       Table.new(@headers, @rows.drop(count))
     end
 
+    def reverse
+      Table.new(@headers, @rows.reverse)
+    end
+
     def count
       @rows.size
     end
