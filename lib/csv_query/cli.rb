@@ -5,7 +5,7 @@ module CsvQuery
     def self.run(argv)
       options = {
         format: "table", select: nil, where: [], sort: nil,
-        distinct: false, count: false, limit: nil, offset: nil
+        distinct: false, count: false, limit: nil, offset: nil, reverse: false
       }
       parser = OptionParser.new do |o|
         o.banner = "Usage: csvq [options] [FILE]"
@@ -26,6 +26,7 @@ module CsvQuery
         end
         o.on("-d", "--distinct", "Drop duplicate rows") { options[:distinct] = true }
         o.on("-c", "--count", "Print number of rows") { options[:count] = true }
+        o.on("--reverse", "Reverse row order") { options[:reverse] = true }
         o.on("-f", "--format FMT", "table|csv|json") do |v|
           options[:format] = v
         end
@@ -51,6 +52,7 @@ module CsvQuery
       table = table.distinct if options[:distinct]
       table = table.offset(options[:offset]) unless options[:offset].nil?
       table = table.limit(options[:limit]) unless options[:limit].nil?
+      table = table.reverse if options[:reverse]
 
       if options[:count]
         puts table.rows.size

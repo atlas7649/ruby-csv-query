@@ -97,6 +97,13 @@ class TestTable < Minitest::Test
     end
   end
 
+  def test_reverse
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    reversed = t.reverse
+    assert_equal %w[Charlie Bob Alice], reversed.rows.map { |r| r["name"] }
+    assert_equal 3, t.rows.size
+  end
+
   def test_from_empty
     t = CsvQuery::Table.from_csv("")
     assert_equal [], t.headers

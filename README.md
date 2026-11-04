@@ -36,6 +36,9 @@ csvq data.csv --sort age:desc
 # Distinct rows, limited
 csvq data.csv --distinct --limit 5
 
+# Reverse row order
+csvq data.csv --reverse
+
 # Count matching rows
 csvq data.csv --where "status = active" --count
 
@@ -64,6 +67,7 @@ result = table.select(%w[name age])
              .where("age >= 30")
              .sort_by("age", :desc)
              .limit(10)
+             .reverse
 puts CsvQuery::Formatters.format(result, "json")
 ```
 
