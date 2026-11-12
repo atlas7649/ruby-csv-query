@@ -36,6 +36,10 @@ csvq data.csv --sort age:desc
 # Distinct rows, limited
 csvq data.csv --distinct --limit 5
 
+# Take the first or last rows
+csvq data.csv --head 5
+csvq data.csv --tail 5
+
 # Reverse row order
 csvq data.csv --reverse
 
@@ -70,6 +74,11 @@ result = table.select(%w[name age])
              .reverse
 puts CsvQuery::Formatters.format(result, "json")
 ```
+
+`Table#head(n)` and `Table#tail(n)` return the first or last `n` rows.
+`Table#slice(offset, length)` (or a `Range`) returns a row range. `take`,
+`skip`, and `head` are provided as familiar aliases for `limit`, `offset`,
+and `limit`.
 
 ## Tests
 

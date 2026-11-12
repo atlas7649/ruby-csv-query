@@ -62,6 +62,9 @@ module CsvQuery
       Table.new(@headers, @rows.first(count))
     end
 
+    alias head limit
+    alias take limit
+
     def offset(n)
       return Table.new(@headers, @rows) if n.nil?
       count = n.to_i
@@ -69,8 +72,36 @@ module CsvQuery
       Table.new(@headers, @rows.drop(count))
     end
 
+    alias skip offset
+
     def reverse
       Table.new(@headers, @rows.reverse)
+    end
+
+    def tail(n)
+      return Table.new(@headers, @rows) if n.nil?
+      count = n.to_i
+      count = 0 if count < 0
+      count = @rows.size if count > @rows.size
+      Table.new(@headers, @rows.last(count))
+    end
+
+    def slice(start, length = nil)
+      if start.is_a?(Range)
+        range = start
+        offset_count = range.begin.nil? ? 0 : range.begin.to_i
+        offset_count = 0 if offset_count < 0
+        if range.end.nil?
+          return offset(offset_count)
+        end
+        last_index = range.end.to_i
+        last_index = @rows.size - 1 if last_index < 0
+        count = last_index - offset_count + (range.exclude_end? ? 0 : 1)
+        count = 0 if count < 0
+        return offset(offset_count).limit(count)
+      end
+
+      offset(start).limit(length)
     end
 
     def count

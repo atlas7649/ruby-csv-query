@@ -104,6 +104,60 @@ class TestTable < Minitest::Test
     assert_equal 3, t.rows.size
   end
 
+  def test_head
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Alice Bob], t.head(2).rows.map { |r| r["name"] }
+    assert_equal 3, t.rows.size
+  end
+
+  def test_head_nil_returns_all_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT).head(nil)
+    assert_equal 3, t.rows.size
+  end
+
+  def test_tail
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Bob Charlie], t.tail(2).rows.map { |r| r["name"] }
+    assert_equal 3, t.rows.size
+  end
+
+  def test_tail_nil_returns_all_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT).tail(nil)
+    assert_equal 3, t.rows.size
+  end
+
+  def test_tail_negative_returns_empty
+    t = CsvQuery::Table.from_csv(CSV_TEXT).tail(-1)
+    assert_equal 0, t.rows.size
+  end
+
+  def test_tail_larger_than_row_count_returns_all_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT).tail(10)
+    assert_equal 3, t.rows.size
+  end
+
+  def test_slice_with_offset_and_length
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Bob Charlie], t.slice(1, 2).rows.map { |r| r["name"] }
+  end
+
+  def test_slice_with_range
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Bob Charlie], t.slice(1..2).rows.map { |r| r["name"] }
+    assert_equal %w[Alice Bob], t.slice(0...2).rows.map { |r| r["name"] }
+  end
+
+  def test_slice_without_length_returns_remaining_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Bob Charlie], t.slice(1).rows.map { |r| r["name"] }
+  end
+
+  def test_take_and_skip_aliases
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal 2, t.take(2).rows.size
+    assert_equal "Bob", t.skip(1).rows[0]["name"]
+  end
+
   def test_from_empty
     t = CsvQuery::Table.from_csv("")
     assert_equal [], t.headers
