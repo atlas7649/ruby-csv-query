@@ -59,7 +59,7 @@ cat data.csv | csvq - --select name
 `COLUMN OP VALUE`, where `OP` is one of `=`, `==`, `!=`, `<>`, `>`, `<`,
 `>=`, `<=`, `contains`, `starts_with`, `ends_with`, `=~`. Values may be
 quoted with single or double quotes. Comparisons are numeric when both sides
-parse as numbers.
+parse as numbers. An empty unquoted value is allowed, for example `name =`.
 
 ## Library usage
 
@@ -69,11 +69,17 @@ require "csv_query"
 table = CsvQuery::Table.from_file("data.csv")
 result = table.select(%w[name age])
              .where("age >= 30")
+             .where { |row| row["city"].to_s.downcase.include?("y") }
+             .reject("city = LA")
              .sort_by("age", :desc)
              .limit(10)
              .reverse
 puts CsvQuery::Formatters.format(result, "json")
 ```
+
+`Table#where` accepts either a condition string or a block. `Table#reject`
+and `Table#find` support the same forms. `Table#sort_by` also accepts a
+block for custom ordering.
 
 `Table#head(n)` and `Table#tail(n)` return the first or last `n` rows.
 `Table#slice(offset, length)` (or a `Range`) returns a row range. `take`,

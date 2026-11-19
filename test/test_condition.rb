@@ -44,6 +44,12 @@ class TestCondition < Minitest::Test
     assert pred.call("city" => "New York")
   end
 
+  def test_empty_value
+    pred = CsvQuery::Condition.parse("name = ", %w[name])
+    assert pred.call("name" => "")
+    refute pred.call("name" => "Alice")
+  end
+
   def test_unknown_column_raises
     assert_raises(ArgumentError) do
       CsvQuery::Condition.parse("nope = 1", %w[age])

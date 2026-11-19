@@ -34,12 +34,52 @@ module CsvQuery
       Table.new(cols, @rows.map { |r| cols.each_with_object({}) { |c, o| o[c] = r[c] } })
     end
 
-    def where(expr)
-      pred = Condition.parse(expr, @headers)
-      Table.new(@headers, @rows.select { |r| pred.call(r) })
+    def where(expr = nil, &block)
+      if block
+        Table.new(@headers, @rows.select { |r| block.call(r) })
+      elsif expr.nil?
+        raise ArgumentError, "missing condition"
+      else
+        pred = Condition.parse(expr, @headers)
+        Table.new(@headers, @rows.select { |r| pred.call(r) })
+      end
     end
 
-    def sort_by(column, direction = :asc)
+    alias filter where
+
+    def reject(expr = nil, &block)
+      if block
+        Table.new(@headers, @rows.reject { |r| block.call(r) })
+      elsif expr.nil?
+        raise ArgumentError, "missing condition"
+      else
+        pred = Condition.parse(expr, @headers)
+        Table.new(@headers, @rows.reject { |r| pred.call(r) })
+      end
+    end
+
+    def find(expr = nil, &block)
+      row = if block
+              @rows.find { |r| block.call(r) }
+            elsif expr.nil?
+              raise ArgumentError, "missing condition"
+            else
+              pred = Condition.parse(expr, @headers)
+              @rows.find { |r| pred.call(r) }
+            end
+      row&.dup
+    end
+
+    def sort_by(column = nil, direction = :asc, &block)
+      if block
+        sorted = @rows.each_with_index.sort do |(ra, ia), (rb, ib)|
+          cmp = (block.call(ra) <=> block.call(rb)) || 0
+          cmp.zero? ? ia <=> ib : cmp
+        end.map(&:first)
+        return Table.new(@headers, sorted)
+      end
+
+      raise ArgumentError, "missing sort key" if column.nil?
       col = column.to_s
       raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
       desc = direction.to_sym == :desc

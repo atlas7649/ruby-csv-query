@@ -34,6 +34,44 @@ class TestTable < Minitest::Test
     assert_equal 2, t.rows.size
   end
 
+  def test_where_block
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    result = t.where { |row| row["age"].to_i >= 30 }
+    assert_equal %w[Alice Charlie], result.rows.map { |r| r["name"] }
+    assert_equal 3, t.rows.size
+  end
+
+  def test_filter_alias
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    result = t.filter("city = LA")
+    assert_equal %w[Bob], result.rows.map { |r| r["name"] }
+  end
+
+  def test_reject_string
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    result = t.reject("city = NYC")
+    assert_equal %w[Bob], result.rows.map { |r| r["name"] }
+  end
+
+  def test_reject_block
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    result = t.reject { |row| row["age"].to_i >= 30 }
+    assert_equal %w[Bob], result.rows.map { |r| r["name"] }
+  end
+
+  def test_find_string
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    row = t.find("name = Bob")
+    assert_equal "Bob", row["name"]
+    assert_nil t.find("name = Zed")
+  end
+
+  def test_find_block
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    row = t.find { |r| r["age"].to_i < 26 }
+    assert_equal "Bob", row["name"]
+  end
+
   def test_sort_desc
     t = CsvQuery::Table.from_csv(CSV_TEXT).sort_by("age", :desc)
     assert_equal "30", t.rows[0]["age"]
@@ -45,6 +83,12 @@ class TestTable < Minitest::Test
     assert_equal %w[Charlie Alice Bob], asc.rows.map { |r| r["name"] }
     desc = t.sort_by("age", :desc)
     assert_equal %w[Alice Bob Charlie], desc.rows.map { |r| r["name"] }
+  end
+
+  def test_sort_by_block
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    result = t.sort_by { |row| row["age"].to_i }
+    assert_equal %w[Bob Alice Charlie], result.rows.map { |r| r["name"] }
   end
 
   def test_distinct

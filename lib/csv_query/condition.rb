@@ -15,7 +15,7 @@ module CsvQuery
         next if col.empty?
         [col, "\"#{col}\"", "'#{col}'"].each do |needle|
           ordered_ops.each do |op|
-            re = /\A\s*#{Regexp.escape(needle)}\s*#{Regexp.escape(op)}\s*(.+?)\s*\z/im
+            re = /\A\s*#{Regexp.escape(needle)}\s*#{Regexp.escape(op)}\s*(.*)\s*\z/im
             m = expr.match(re)
             next unless m
             val = unquote(m[1].strip)
@@ -26,7 +26,7 @@ module CsvQuery
 
       unknown_column = nil
       ordered_ops.each do |op|
-        re = /\A\s*(.+?)\s*#{Regexp.escape(op)}\s*(.+?)\s*\z/im
+        re = /\A\s*(.+?)\s*#{Regexp.escape(op)}\s*(.*)\s*\z/im
         m = expr.match(re)
         next unless m
         col = unquote(m[1].strip)
