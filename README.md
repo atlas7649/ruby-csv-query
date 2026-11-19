@@ -30,6 +30,9 @@ csvq data.csv --select name,age
 # Filter rows (repeatable, combined with AND)
 csvq data.csv --where "age >= 30" --where "city contains york"
 
+# Exclude rows (repeatable)
+csvq data.csv --reject "city = LA"
+
 # Sort (append :desc for descending)
 csvq data.csv --sort age:desc
 

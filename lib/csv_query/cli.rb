@@ -4,7 +4,7 @@ module CsvQuery
   class CLI
     def self.run(argv)
       options = {
-        format: "table", select: nil, where: [], sort: nil,
+        format: "table", select: nil, where: [], reject: [], sort: nil,
         distinct: false, count: false, limit: nil, offset: nil,
         head: nil, tail: nil, reverse: false
       }
@@ -15,6 +15,9 @@ module CsvQuery
         end
         o.on("-w", "--where EXPR", "Filter expression (repeatable)") do |v|
           options[:where] << v
+        end
+        o.on("--reject EXPR", "Exclude rows matching expression (repeatable)") do |v|
+          options[:reject] << v
         end
         o.on("--sort COL", "Sort by column, append :desc") do |v|
           options[:sort] = v
@@ -52,6 +55,7 @@ module CsvQuery
       table = Table.from_file(file)
       table = table.select(options[:select]) if options[:select]
       options[:where].each { |w| table = table.where(w) }
+      options[:reject].each { |r| table = table.reject(r) }
       if options[:sort]
         col, dir = options[:sort].split(":", 2)
         table = table.sort_by(col, dir == "desc" ? :desc : :asc)
