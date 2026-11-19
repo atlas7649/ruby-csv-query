@@ -4,6 +4,8 @@ module CsvQuery
   class Table
     attr_reader :headers, :rows
 
+    include Enumerable
+
     def initialize(headers, rows)
       @headers = (headers || []).map(&:to_s)
       @rows = (rows || []).map { |r| normalize_row(r) }
@@ -27,8 +29,18 @@ module CsvQuery
       from_csv(text)
     end
 
-    def select(columns)
-      cols = columns.map(&:to_s)
+    def each(&block)
+      return enum_for(:each) unless block_given?
+      @rows.each { |row| block.call(row.dup) }
+      self
+    end
+
+    def select(*columns, &block)
+      if block_given? && columns.empty?
+        return Table.new(@headers, @rows.select { |row| block.call(row) })
+      end
+
+      cols = columns.flatten.map(&:to_s)
       unknown = cols - @headers
       raise ArgumentError, "unknown column(s): #{unknown.join(', ')}" unless unknown.empty?
       Table.new(cols, @rows.map { |r| cols.each_with_object({}) { |c, o| o[c] = r[c] } })
@@ -59,7 +71,11 @@ module CsvQuery
     end
 
     def find(expr = nil, &block)
-      row = if block
+      if expr.nil? && !block_given?
+        return @rows.first&.dup
+      end
+
+      row = if block_given?
               @rows.find { |r| block.call(r) }
             elsif expr.nil?
               raise ArgumentError, "missing condition"
@@ -140,23 +156,45 @@ module CsvQuery
     def slice(start, length = nil)
       if start.is_a?(Range)
         range = start
-        offset_count = range.begin.nil? ? 0 : range.begin.to_i
-        offset_count = 0 if offset_count < 0
+        offset_count = if range.begin.nil?
+                         0
+                       else
+                         i = range.begin.to_i
+                         i += @rows.size if i < 0
+                         i < 0 ? 0 : i
+                       end
+        return Table.new(@headers, []) if offset_count > @rows.size
+
         if range.end.nil?
           return offset(offset_count)
         end
+
         last_index = range.end.to_i
-        last_index = @rows.size - 1 if last_index < 0
+        last_index += @rows.size if last_index < 0
+        last_index = @rows.size - 1 if last_index > @rows.size - 1
         count = last_index - offset_count + (range.exclude_end? ? 0 : 1)
         count = 0 if count < 0
-        return offset(offset_count).limit(count)
-      end
+        offset(offset_count).limit(count)
+      else
+        start_i = start.to_i
+        if start_i < 0
+          start_i += @rows.size
+          return Table.new(@headers, []) if start_i < 0
+        end
+        return Table.new(@headers, []) if start_i > @rows.size
 
-      offset(start).limit(length)
+        len = length.nil? ? nil : length.to_i
+        return Table.new(@headers, []) if !len.nil? && len < 0
+        offset(start_i).limit(len)
+      end
     end
 
-    def count
-      @rows.size
+    def count(*_args, &block)
+      if block_given?
+        @rows.count { |row| block.call(row) }
+      else
+        @rows.size
+      end
     end
 
     alias size count

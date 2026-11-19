@@ -87,9 +87,14 @@ block for custom ordering.
 `Table#head(n)` and `Table#tail(n)` return the first or last `n` rows.
 `Table#first` returns the first row, or the first `n` rows when given a
 count; `Table#last` does the same from the end. `Table#slice(offset, length)`
-(or a `Range`) returns a row range. `take`, `skip`, `drop`, and `head` are
-provided as familiar aliases for `limit`, `offset`, `offset`, and `limit`.
-`size` and `length` alias `count`; `empty?` and `to_a` are also available.
+(or a `Range`) returns a row range. Negative offsets count from the end of
+the table. `take`, `skip`, `drop`, and `head` are provided as familiar
+aliases for `limit`, `offset`, `offset`, and `limit`. `size` and `length`
+alias `count`; `empty?` and `to_a` are also available.
+
+`Table` includes `Enumerable`, so methods such as `each`, `map`, `select`
+with a block, `any?`, `all?`, and `count` with a block are available.
+Block-filtering helpers return new `Table` objects.
 
 ## Tests
 

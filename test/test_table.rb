@@ -72,6 +72,11 @@ class TestTable < Minitest::Test
     assert_equal "Bob", row["name"]
   end
 
+  def test_find_without_argument_returns_first_row
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal "Alice", (t.find)["name"]
+  end
+
   def test_sort_desc
     t = CsvQuery::Table.from_csv(CSV_TEXT).sort_by("age", :desc)
     assert_equal "30", t.rows[0]["age"]
@@ -196,6 +201,13 @@ class TestTable < Minitest::Test
     assert_equal %w[Bob Charlie], t.slice(1).rows.map { |r| r["name"] }
   end
 
+  def test_slice_negative_offset
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Charlie], t.slice(-1, 1).rows.map { |r| r["name"] }
+    assert_equal %w[Bob Charlie], t.slice(1..-1).rows.map { |r| r["name"] }
+    assert_equal %w[Alice Bob], t.slice(0...-1).rows.map { |r| r["name"] }
+  end
+
   def test_take_and_skip_aliases
     t = CsvQuery::Table.from_csv(CSV_TEXT)
     assert_equal 2, t.take(2).rows.size
@@ -238,6 +250,29 @@ class TestTable < Minitest::Test
     refute t.empty?
     assert_equal 3, t.to_a.size
     assert CsvQuery::Table.from_csv("").empty?
+  end
+
+  def test_each_yields_rows
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    names = []
+    t.each { |row| names << row["name"] }
+    assert_equal %w[Alice Bob Charlie], names
+  end
+
+  def test_map
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Alice Bob Charlie], t.map { |row| row["name"] }
+  end
+
+  def test_select_with_block
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    result = t.select { |row| row["age"].to_i >= 30 }
+    assert_equal %w[Alice Charlie], result.rows.map { |r| r["name"] }
+  end
+
+  def test_count_with_block
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal 2, t.count { |row| row["age"].to_i >= 30 }
   end
 
   def test_from_empty
