@@ -107,9 +107,14 @@ module CsvQuery
       Table.new(@headers, sorted)
     end
 
+    alias sort sort_by
+
     def distinct
       Table.new(@headers, @rows.uniq)
     end
+
+    alias uniq distinct
+    alias unique distinct
 
     def limit(n)
       return Table.new(@headers, @rows) if n.nil?
@@ -189,6 +194,40 @@ module CsvQuery
       end
     end
 
+    def [](index, length = nil)
+      if index.is_a?(Range)
+        slice(index)
+      elsif index.is_a?(String) || index.is_a?(Symbol)
+        col = index.to_s
+        raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
+        pluck(col)
+      elsif length.nil?
+        i = index.to_i
+        i += @rows.size if i < 0
+        return nil if i < 0 || i >= @rows.size
+        @rows[i]&.dup
+      else
+        slice(index, length)
+      end
+    end
+
+    def group_by(key = nil, &block)
+      raise ArgumentError, "missing group key" if key.nil? && !block_given?
+      groups = Hash.new { |h, k| h[k] = [] }
+      @rows.each do |row|
+        value = block_given? ? block.call(row) : row[key.to_s]
+        groups[value] << row
+      end
+      groups.transform_values { |rows| Table.new(@headers, rows) }
+    end
+
+    def concat(other)
+      other_rows = other.is_a?(Table) ? other.rows : Array(other)
+      Table.new(@headers, @rows + other_rows.map { |r| normalize_row(r) })
+    end
+
+    alias + concat
+
     def count(*_args, &block)
       if block_given?
         @rows.count { |row| block.call(row) }
@@ -206,6 +245,14 @@ module CsvQuery
 
     def to_a
       @rows.map(&:dup)
+    end
+
+    def to_csv
+      CsvQuery::Formatters.csv(self)
+    end
+
+    def to_json(*_args)
+      CsvQuery::Formatters.json(self)
     end
 
     def pluck(column)
