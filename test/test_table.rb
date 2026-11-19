@@ -202,6 +202,44 @@ class TestTable < Minitest::Test
     assert_equal "Bob", t.skip(1).rows[0]["name"]
   end
 
+  def test_first_without_argument_returns_first_row
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    row = t.first
+    assert_equal "Alice", row["name"]
+    assert_equal 3, t.rows.size
+  end
+
+  def test_first_with_argument_returns_table
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Alice Bob], t.first(2).rows.map { |r| r["name"] }
+  end
+
+  def test_last_without_argument_returns_last_row
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    row = t.last
+    assert_equal "Charlie", row["name"]
+    assert_equal 3, t.rows.size
+  end
+
+  def test_last_with_argument_returns_table
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal %w[Bob Charlie], t.last(2).rows.map { |r| r["name"] }
+  end
+
+  def test_drop_alias
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal "Bob", t.drop(1).rows[0]["name"]
+  end
+
+  def test_size_length_empty_and_to_a
+    t = CsvQuery::Table.from_csv(CSV_TEXT)
+    assert_equal 3, t.size
+    assert_equal 3, t.length
+    refute t.empty?
+    assert_equal 3, t.to_a.size
+    assert CsvQuery::Table.from_csv("").empty?
+  end
+
   def test_from_empty
     t = CsvQuery::Table.from_csv("")
     assert_equal [], t.headers

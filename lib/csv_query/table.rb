@@ -113,6 +113,7 @@ module CsvQuery
     end
 
     alias skip offset
+    alias drop offset
 
     def reverse
       Table.new(@headers, @rows.reverse)
@@ -124,6 +125,16 @@ module CsvQuery
       count = 0 if count < 0
       count = @rows.size if count > @rows.size
       Table.new(@headers, @rows.last(count))
+    end
+
+    def first(n = nil)
+      return @rows.first&.dup if n.nil?
+      head(n)
+    end
+
+    def last(n = nil)
+      return @rows.last&.dup if n.nil?
+      tail(n)
     end
 
     def slice(start, length = nil)
@@ -146,6 +157,17 @@ module CsvQuery
 
     def count
       @rows.size
+    end
+
+    alias size count
+    alias length count
+
+    def empty?
+      @rows.empty?
+    end
+
+    def to_a
+      @rows.map(&:dup)
     end
 
     def pluck(column)

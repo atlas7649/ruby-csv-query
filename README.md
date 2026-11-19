@@ -85,9 +85,11 @@ and `Table#find` support the same forms. `Table#sort_by` also accepts a
 block for custom ordering.
 
 `Table#head(n)` and `Table#tail(n)` return the first or last `n` rows.
-`Table#slice(offset, length)` (or a `Range`) returns a row range. `take`,
-`skip`, and `head` are provided as familiar aliases for `limit`, `offset`,
-and `limit`.
+`Table#first` returns the first row, or the first `n` rows when given a
+count; `Table#last` does the same from the end. `Table#slice(offset, length)`
+(or a `Range`) returns a row range. `take`, `skip`, `drop`, and `head` are
+provided as familiar aliases for `limit`, `offset`, `offset`, and `limit`.
+`size` and `length` alias `count`; `empty?` and `to_a` are also available.
 
 ## Tests
 
