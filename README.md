@@ -96,6 +96,22 @@ alias `count`; `empty?` and `to_a` are also available.
 with a block, `any?`, `all?`, and `count` with a block are available.
 Block-filtering helpers return new `Table` objects.
 
+Tables can be combined with SQL-like joins:
+
+```ruby
+users = CsvQuery::Table.from_file("users.csv")
+orders = CsvQuery::Table.from_file("orders.csv")
+
+users.join(orders, on: "id")
+users.left_join(orders, left_on: "user_id", right_on: "id")
+users.right_join(orders, on: "id")
+users.full_join(orders, on: "id")
+```
+
+When both tables share one column name, that column is used automatically.
+Right-table columns that would collide with left-table columns are suffixed
+with `_right`. Joining an Array of row Hashes is also supported.
+
 ## Tests
 
 ```sh

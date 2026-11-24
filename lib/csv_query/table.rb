@@ -221,6 +221,102 @@ module CsvQuery
       groups.transform_values { |rows| Table.new(@headers, rows) }
     end
 
+    def join(other, on: nil, left_on: nil, right_on: nil, type: :inner)
+      right = if other.is_a?(Table)
+                other
+              elsif other.is_a?(Array)
+                inferred = []
+                other.each do |row|
+                  keys = row.is_a?(Hash) ? row.keys.map(&:to_s) : @headers
+                  keys.each { |key| inferred << key unless inferred.include?(key) }
+                end
+                inferred = @headers.dup if inferred.empty?
+                Table.new(inferred, other)
+              else
+                raise ArgumentError, "expected a Table or Array of rows"
+              end
+
+      left_key = left_on || on
+      right_key = right_on || on
+      if left_key.nil? && right_key.nil?
+        common = @headers & right.headers
+        raise ArgumentError, "missing join key" if common.empty?
+        raise ArgumentError, "ambiguous join key: #{common.join(', ')}" if common.size > 1
+        left_key = right_key = common.first
+      else
+        left_key = right_key if left_key.nil?
+        right_key = left_key if right_key.nil?
+      end
+      left_key = left_key.to_s
+      right_key = right_key.to_s
+
+      raise ArgumentError, "unknown column: #{left_key}" unless @headers.include?(left_key)
+      raise ArgumentError, "unknown column: #{right_key}" unless right.headers.include?(right_key)
+
+      join_type = type.to_sym
+      unless %i[inner left right full].include?(join_type)
+        raise ArgumentError, "unknown join type: #{type}"
+      end
+
+      used_headers = @headers.dup
+      right_output = {}
+      right.headers.each do |header|
+        next if header == right_key
+        name = header
+        if used_headers.include?(name)
+          name = "#{header}_right"
+          suffix = 2
+          while used_headers.include?(name)
+            name = "#{header}_right#{suffix}"
+            suffix += 1
+          end
+        end
+        used_headers << name
+        right_output[header] = name
+      end
+      new_headers = @headers + right.headers.select { |header| header != right_key }.map { |header| right_output[header] }
+
+      matched_right = {}
+      result_rows = []
+
+      @rows.each do |left_row|
+        matches = right.rows.select { |right_row| join_keys_equal?(right_row[right_key], left_row[left_key]) }
+        if matches.empty?
+          result_rows << build_join_row(left_row, nil, right.headers, right_key, right_output) if join_type == :left || join_type == :full
+        else
+          matches.each do |right_row|
+            result_rows << build_join_row(left_row, right_row, right.headers, right_key, right_output)
+            matched_right[right_row.object_id] = true
+          end
+        end
+      end
+
+      if join_type == :right || join_type == :full
+        right.rows.each do |right_row|
+          next if matched_right[right_row.object_id]
+          result_rows << build_join_row(nil, right_row, right.headers, right_key, right_output)
+        end
+      end
+
+      Table.new(new_headers, result_rows)
+    end
+
+    def inner_join(other, on: nil, left_on: nil, right_on: nil)
+      join(other, on: on, left_on: left_on, right_on: right_on, type: :inner)
+    end
+
+    def left_join(other, on: nil, left_on: nil, right_on: nil)
+      join(other, on: on, left_on: left_on, right_on: right_on, type: :left)
+    end
+
+    def right_join(other, on: nil, left_on: nil, right_on: nil)
+      join(other, on: on, left_on: left_on, right_on: right_on, type: :right)
+    end
+
+    def full_join(other, on: nil, left_on: nil, right_on: nil)
+      join(other, on: on, left_on: left_on, right_on: right_on, type: :full)
+    end
+
     def concat(other)
       other_rows = other.is_a?(Table) ? other.rows : Array(other)
       Table.new(@headers, @rows + other_rows.map { |r| normalize_row(r) })
@@ -262,6 +358,22 @@ module CsvQuery
     end
 
     private
+
+    def build_join_row(left_row, right_row, right_headers, right_key, right_output)
+      row = {}
+      @headers.each { |header| row[header] = left_row ? left_row[header] : nil }
+      right_headers.each do |header|
+        next if header == right_key
+        row[right_output[header]] = right_row ? right_row[header] : nil
+      end
+      row
+    end
+
+    def join_keys_equal?(a, b)
+      return true if a.nil? && b.nil?
+      return false if a.nil? || b.nil?
+      a.to_s == b.to_s
+    end
 
     def normalize_row(r)
       if r.is_a?(Hash)
