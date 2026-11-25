@@ -282,10 +282,10 @@ module CsvQuery
       @rows.each do |left_row|
         matches = right.rows.select { |right_row| join_keys_equal?(right_row[right_key], left_row[left_key]) }
         if matches.empty?
-          result_rows << build_join_row(left_row, nil, right.headers, right_key, right_output) if join_type == :left || join_type == :full
+          result_rows << build_join_row(left_row, nil, right.headers, right_key, right_output, left_key) if join_type == :left || join_type == :full
         else
           matches.each do |right_row|
-            result_rows << build_join_row(left_row, right_row, right.headers, right_key, right_output)
+            result_rows << build_join_row(left_row, right_row, right.headers, right_key, right_output, left_key)
             matched_right[right_row.object_id] = true
           end
         end
@@ -294,7 +294,7 @@ module CsvQuery
       if join_type == :right || join_type == :full
         right.rows.each do |right_row|
           next if matched_right[right_row.object_id]
-          result_rows << build_join_row(nil, right_row, right.headers, right_key, right_output)
+          result_rows << build_join_row(nil, right_row, right.headers, right_key, right_output, left_key)
         end
       end
 
@@ -359,9 +359,12 @@ module CsvQuery
 
     private
 
-    def build_join_row(left_row, right_row, right_headers, right_key, right_output)
+    def build_join_row(left_row, right_row, right_headers, right_key, right_output, left_key = nil)
       row = {}
       @headers.each { |header| row[header] = left_row ? left_row[header] : nil }
+      if left_row.nil? && left_key && right_row
+        row[left_key] = right_row[right_key]
+      end
       right_headers.each do |header|
         next if header == right_key
         row[right_output[header]] = right_row ? right_row[header] : nil
