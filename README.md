@@ -49,6 +49,12 @@ csvq data.csv --reverse
 # Count matching rows
 csvq data.csv --where "status = active" --count
 
+# Aggregate a numeric column
+csvq data.csv --sum age
+csvq data.csv --avg age
+csvq data.csv --min age
+csvq data.csv --max age
+
 # Output formats
 csvq data.csv --format csv
 csvq data.csv --format json
@@ -111,6 +117,21 @@ users.full_join(orders, on: "id")
 When both tables share one column name, that column is used automatically.
 Right-table columns that would collide with left-table columns are suffixed
 with `_right`. Joining an Array of row Hashes is also supported.
+
+Basic aggregation helpers are available for numeric columns:
+
+```ruby
+table.sum("age")
+table.average("age") # aliased as avg
+table.minimum("age")
+table.maximum("age")
+table.count("age") # counts non-nil values
+```
+
+Each aggregation also accepts a block. For `sum` and `average`, the block
+receives either the whole row when no column is given or the selected
+value when a column is given. `minimum` and `maximum` operate on the
+resulting values. `nil` values are ignored by `minimum` and `maximum`.
 
 ## Tests
 

@@ -6,7 +6,8 @@ module CsvQuery
       options = {
         format: "table", select: nil, where: [], reject: [], sort: nil,
         distinct: false, count: false, limit: nil, offset: nil,
-        head: nil, tail: nil, reverse: false
+        head: nil, tail: nil, reverse: false,
+        sum: nil, avg: nil, min: nil, max: nil
       }
       parser = OptionParser.new do |o|
         o.banner = "Usage: csvq [options] [FILE]"
@@ -40,6 +41,21 @@ module CsvQuery
         o.on("-f", "--format FMT", "table|csv|json") do |v|
           options[:format] = v
         end
+        o.on("--sum COL", "Print sum of a numeric column") do |v|
+          options[:sum] = v
+        end
+        o.on("--avg COL", "Print average of a numeric column") do |v|
+          options[:avg] = v
+        end
+        o.on("--average COL", "Print average of a numeric column") do |v|
+          options[:avg] = v
+        end
+        o.on("--min COL", "Print minimum value in a column") do |v|
+          options[:min] = v
+        end
+        o.on("--max COL", "Print maximum value in a column") do |v|
+          options[:max] = v
+        end
         o.on("-v", "--version", "Print version") do
           puts "csvq #{VERSION}"
           exit
@@ -67,8 +83,16 @@ module CsvQuery
       table = table.reverse if options[:reverse]
       table = table.tail(options[:tail]) unless options[:tail].nil?
 
-      if options[:count]
-        puts table.rows.size
+      if options[:sum]
+        puts table.sum(options[:sum])
+      elsif options[:avg]
+        puts table.average(options[:avg])
+      elsif options[:min]
+        puts table.minimum(options[:min])
+      elsif options[:max]
+        puts table.maximum(options[:max])
+      elsif options[:count]
+        puts table.count
       else
         output = Formatters.format(table, options[:format])
         print output

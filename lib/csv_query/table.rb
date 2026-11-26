@@ -324,11 +324,15 @@ module CsvQuery
 
     alias + concat
 
-    def count(*_args, &block)
+    def count(column = nil, &block)
       if block_given?
         @rows.count { |row| block.call(row) }
-      else
+      elsif column.nil?
         @rows.size
+      else
+        col = column.to_s
+        raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
+        @rows.count { |row| !row[col].nil? }
       end
     end
 
@@ -357,7 +361,65 @@ module CsvQuery
       @rows.map { |r| r[col] }
     end
 
+    def sum(column = nil, &block)
+      values = aggregate_values(column, &block)
+      numbers = values.filter_map { |value| to_number(value) }
+      numbers.sum
+    end
+
+    def average(column = nil, &block)
+      values = aggregate_values(column, &block)
+      numbers = values.filter_map { |value| to_number(value) }
+      return nil if numbers.empty?
+      numbers.sum.to_f / numbers.size
+    end
+
+    alias avg average
+
+    def minimum(column = nil, &block)
+      values = aggregate_values(column, &block).reject(&:nil?)
+      return nil if values.empty?
+      values.min_by { |value| sort_key(value) }
+    end
+
+    def maximum(column = nil, &block)
+      values = aggregate_values(column, &block).reject(&:nil?)
+      return nil if values.empty?
+      values.max_by { |value| sort_key(value) }
+    end
+
     private
+
+    def aggregate_values(column = nil, &block)
+      if block_given?
+        if column.nil?
+          @rows.map { |row| block.call(row) }
+        else
+          col = column.to_s
+          raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
+          @rows.map { |row| block.call(row[col]) }
+        end
+      else
+        raise ArgumentError, "missing column" if column.nil?
+        col = column.to_s
+        raise ArgumentError, "unknown column: #{col}" unless @headers.include?(col)
+        pluck(col)
+      end
+    end
+
+    def to_number(value)
+      return nil if value.nil?
+      text = value.to_s.strip
+      return nil if text.empty?
+      unless Condition.numeric?(value)
+        raise ArgumentError, "non-numeric value: #{value.inspect}"
+      end
+      if Condition.integer_string?(value)
+        Integer(text, 10)
+      else
+        Float(value)
+      end
+    end
 
     def build_join_row(left_row, right_row, right_headers, right_key, right_output, left_key = nil)
       row = {}
